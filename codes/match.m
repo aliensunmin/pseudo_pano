@@ -2,19 +2,29 @@ classdef match
 	properties (Constant)
 		pborderW = 0.10;
 		plist = linspace(0,255,8);
+        distFunc = str2func('match.colorHist'); % define your own feature
 	end
 	methods(Static)
-        function getOrder(imFs)
-            [optRoute,minDist] = tspath(imFs);
+        function [order, flipFlags, imFs] = getOrder(folder,distFunc) % start from this function
+            if nargin < 2
+                distFunc = match.distFunc;
+            end
+			imFs = match.getImFs(folder);
+            [optRoute,minDist] = match.tspath(imFs,distFunc);
             tmp = optRoute(1:2:end)/2;
             order = round(tmp);
             flipFlags = order==tmp;
         end
-		function [optRoute,minDist] = tspath(imFs)
-			feats = match.getFeatsWrap(imFs);
+		function [optRoute,minDist] = tspath(imFs,distFunc)
+			feats = match.getFeatsWrap(imFs,distFunc);
             feats = [feats{:}];
-            D = pdist(feats,'cosine');
+            dist = pdist(feats','cosine');
             L = size(feats,2);
+            U = triu(ones(L),1);
+            inds = find(U==1);
+            D = zeros(L);
+            D(inds) = dist;
+            D = D'+D;
 			inds = sub2ind(size(D),1:2:L,2:2:L);
             D(inds) = 0;
             inds = sub2ind(size(D),2:2:L,1:2:L);
@@ -31,7 +41,7 @@ classdef match
 				imFs{n} = fullfile(folder,files(n).name);
 			end
 		end
-		function feats = getFeatsWrap(imFs)
+		function feats = getFeatsWrap(imFs,distFunc) 
 			N = length(imFs);
 			feats = {};
 			% extract features
@@ -42,18 +52,20 @@ classdef match
 					[status msg] = unix(['mkdir -p ' file]);					
 				end
 				file = fullfile(file,[name '.mat']);
-% 				try
-% 					tmp = load(file,'feats');
-% 					feats = [feats tmp.feats];
-% 				catch
+ 				try
+ 					tmp = load(file,'feats');
+ 					feats = [feats tmp.feats];
+ 				catch
 					im = imread(imFs{n});
-					feats = [feats match.leftRightFeats(im)];
-% 				end
+					feats = [feats match.leftRightFeats(im,distFunc)];
+ 				end
 			end
 		end
-		function feats = leftRightFeats(im)
-			feats{1} = match.colorHist(im);% right
-			feats{2} = match.colorHist(im(:,end:-1:1,:));% left
+		function feats = leftRightFeats(im,distFunc)
+% 			feats{1} = match.colorHist(im);% right
+% 			feats{2} = match.colorHist(im(:,end:-1:1,:));% left
+            feats{1} = distFunc(im);% right
+			feats{2} = distFunc(im(:,end:-1:1,:));% left
 		end
 		function feat = colorHist(im,p)
 			if nargin < 2
