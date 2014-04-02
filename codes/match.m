@@ -7,7 +7,7 @@ classdef match
         distFunc = str2func('match.colorHist'); % define your own feature
 	end
 	methods(Static)
-		function pano = PanoV1(order, flipFlags, imFs, Height, folder)
+		function pano = PanoV1(order, flipFlags, imFs, Height, folder) % generate pano image
 			N = length(imFs);
 			pano = [];
 			for n = 1:N
@@ -30,7 +30,7 @@ classdef match
             cmd = sprintf('convert %s +append %s',fs_str,pano_str);
             [status msg] = unix(cmd);
 		end
-        function [order, flipFlags, imFs] = getOrder(folder,distFunc) % start from this function
+        function [order, flipFlags, imFs] = getOrder(folder,distFunc) % obsolete
             if nargin < 2
                 distFunc = match.distFunc;
             end
@@ -46,7 +46,7 @@ classdef match
             xy = rand(L,2);
             [optRoute,minDist] = tsp_ga(xy,D);
 		end
-		function [order, imFs] = SampleOrderWrap(folder,distFunc)
+		function [order, imFs] = SampleOrderWrap(folder,distFunc) % start from this function
             if nargin < 2
                 distFunc = match.distFunc;
             end
